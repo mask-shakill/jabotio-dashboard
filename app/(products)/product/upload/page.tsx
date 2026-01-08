@@ -1,25 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { useCreateProductStore } from "@/store/products/createStore";
-import { ProductPayload } from "@/types/product";
+import React, { useState, useEffect } from "react";
+import {
+  useCreateProductStore,
+  ProductPayload,
+} from "@/store/products/uploadStore";
+import { useRouter } from "next/navigation";
 
-export default function CreateProductPage() {
-  const { createProduct, loading } = useCreateProductStore();
+export default function ProductUploadPage() {
+  const { createProduct, loading, error } = useCreateProductStore();
+  const router = useRouter();
 
-  const [form, setForm] = useState<ProductPayload>({
+  const [formData, setFormData] = useState<ProductPayload>({
     name: "",
     price: "",
     items: "",
     old_price: "",
     category: "",
     descriptions: "",
-    tags: "",
+    tags: "[]",
     brand: "",
     discount: 0,
     stock: 0,
-    size: "",
-    colors: "",
+    size: "[]",
+    colors: "[]",
     warranty: "",
     sold: 0,
     thumnails: null,
@@ -29,128 +33,261 @@ export default function CreateProductPage() {
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const handleChange = (
+  useEffect(() => {
+    if (formData.thumnails) {
+      const url = URL.createObjectURL(formData.thumnails);
+      setThumbPreview(url);
+
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setThumbPreview(null);
+    }
+  }, [formData.thumnails]);
+
+  useEffect(() => {
+    if (formData.images.length > 0) {
+      const urls = formData.images.map((file) => URL.createObjectURL(file));
+      setImagePreviews(urls);
+
+      return () => {
+        urls.forEach((url) => URL.revokeObjectURL(url));
+      };
+    } else {
+      setImagePreviews([]);
+    }
+  }, [formData.images]);
+
+  function handleInputChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  ) {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function handleNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, value } = e.target;
+    const numberValue = parseInt(value, 10);
+    setFormData((prev) => ({
+      ...prev,
+      [name]: isNaN(numberValue) ? 0 : numberValue,
+    }));
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, files } = e.target;
+    if (!files) return;
+
+    if (name === "thumnails") {
+      setFormData((prev) => ({ ...prev, thumnails: files[0] }));
+    } else if (name === "images") {
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...Array.from(files)],
+      }));
+    }
+  }
+
+  function handleJSONChange(field: keyof ProductPayload, jsonString: string) {
+    // Basic validation (optional)
+    try {
+      JSON.parse(jsonString);
+      setFormData((prev) => ({ ...prev, [field]: jsonString }));
+    } catch {
+      // ignore invalid JSON
+    }
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    await createProduct(formData);
+
+    if (!error) {
+      router.push("/all-products");
+    }
+  }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">Create Product</h1>
+    <div className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Upload Product</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          "name",
-          "price",
-          "old_price",
-          "items",
-          "category",
-          "brand",
-          "warranty",
-        ].map((field) => (
-          <input
-            key={field}
-            name={field}
-            placeholder={field}
-            className="border p-2 rounded"
-            onChange={handleChange}
-          />
-        ))}
+      <form onSubmit={onSubmit} className="space-y-4">
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleInputChange}
+          placeholder="Name"
+          required
+          className="input-field"
+        />
 
         <input
-          name="discount"
-          type="number"
-          placeholder="discount"
-          className="border p-2"
-          onChange={handleChange}
+          type="text"
+          name="price"
+          value={formData.price}
+          onChange={handleInputChange}
+          placeholder="Price"
+          required
+          className="input-field"
         />
+
         <input
-          name="stock"
-          type="number"
-          placeholder="stock"
-          className="border p-2"
-          onChange={handleChange}
+          type="text"
+          name="items"
+          value={formData.items}
+          onChange={handleInputChange}
+          placeholder="Items"
+          className="input-field"
         />
+
         <input
-          name="sold"
-          type="number"
-          placeholder="sold"
-          className="border p-2"
-          onChange={handleChange}
+          type="text"
+          name="old_price"
+          value={formData.old_price}
+          onChange={handleInputChange}
+          placeholder="Old Price"
+          className="input-field"
+        />
+
+        <input
+          type="text"
+          name="category"
+          value={formData.category}
+          onChange={handleInputChange}
+          placeholder="Category"
+          className="input-field"
         />
 
         <textarea
           name="descriptions"
-          placeholder="descriptions"
-          className="border p-2 col-span-3"
-          onChange={handleChange}
+          value={formData.descriptions}
+          onChange={handleInputChange}
+          placeholder="Descriptions"
+          className="input-field"
         />
-        <textarea
+
+        <input
+          type="text"
           name="tags"
-          placeholder="tags (JSON)"
-          className="border p-2 col-span-3"
-          onChange={handleChange}
+          value={formData.tags}
+          onChange={(e) => handleJSONChange("tags", e.target.value)}
+          placeholder='Tags (JSON array like ["tag1", "tag2"])'
+          className="input-field"
         />
-        <textarea
+
+        <input
+          type="text"
+          name="brand"
+          value={formData.brand}
+          onChange={handleInputChange}
+          placeholder="Brand"
+          className="input-field"
+        />
+
+        <input
+          type="number"
+          name="discount"
+          value={formData.discount}
+          onChange={handleNumberChange}
+          placeholder="Discount"
+          className="input-field"
+          min={0}
+        />
+
+        <input
+          type="number"
+          name="stock"
+          value={formData.stock}
+          onChange={handleNumberChange}
+          placeholder="Stock"
+          className="input-field"
+          min={0}
+        />
+
+        <input
+          type="text"
           name="size"
-          placeholder="size (JSON)"
-          className="border p-2 col-span-3"
-          onChange={handleChange}
+          value={formData.size}
+          onChange={(e) => handleJSONChange("size", e.target.value)}
+          placeholder='Size (JSON array like ["S", "M", "L"])'
+          className="input-field"
         />
-        <textarea
+
+        <input
+          type="text"
           name="colors"
-          placeholder="colors (JSON)"
-          className="border p-2 col-span-3"
-          onChange={handleChange}
+          value={formData.colors}
+          onChange={(e) => handleJSONChange("colors", e.target.value)}
+          placeholder='Colors (JSON array like ["red", "green"])'
+          className="input-field"
         />
-      </div>
 
-      {/* Thumbnail */}
-      <div className="mt-6">
-        <p className="mb-2">Thumbnail</p>
         <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            setForm({ ...form, thumnails: file });
-            setThumbPreview(URL.createObjectURL(file));
-          }}
+          type="text"
+          name="warranty"
+          value={formData.warranty}
+          onChange={handleInputChange}
+          placeholder="Warranty"
+          className="input-field"
         />
-        {thumbPreview && (
-          <img src={thumbPreview} className="w-32 mt-2 rounded" />
-        )}
-      </div>
 
-      {/* Images */}
-      <div className="mt-6">
-        <p className="mb-2">Images</p>
         <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={(e) => {
-            const files = Array.from(e.target.files || []);
-            setForm({ ...form, images: files });
-            setImagePreviews(files.map((f) => URL.createObjectURL(f)));
-          }}
+          type="number"
+          name="sold"
+          value={formData.sold}
+          onChange={handleNumberChange}
+          placeholder="Sold"
+          className="input-field"
+          min={0}
         />
-        <div className="flex gap-2 mt-2 flex-wrap">
-          {imagePreviews.map((src, i) => (
-            <img key={i} src={src} className="w-24 h-24 object-cover rounded" />
-          ))}
-        </div>
-      </div>
 
-      <button
-        disabled={loading}
-        onClick={() => createProduct(form)}
-        className="mt-6 px-6 py-2 bg-black text-white rounded"
-      >
-        {loading ? "Creating..." : "Create Product"}
-      </button>
+        <label className="block">
+          Thumbnail:
+          <input
+            type="file"
+            name="thumnails"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="mt-1"
+          />
+          {thumbPreview && (
+            <img
+              src={thumbPreview}
+              alt="Thumbnail Preview"
+              className="mt-2 max-h-40"
+            />
+          )}
+        </label>
+
+        <label className="block">
+          Images:
+          <input
+            type="file"
+            name="images"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="mt-1"
+          />
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {imagePreviews.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt={`Image Preview ${i}`}
+                className="max-h-40"
+              />
+            ))}
+          </div>
+        </label>
+
+        {error && <p className="text-red-600">{error}</p>}
+
+        <button type="submit" disabled={loading} className="btn-primary mt-4">
+          {loading ? "Uploading..." : "Upload"}
+        </button>
+      </form>
     </div>
   );
 }

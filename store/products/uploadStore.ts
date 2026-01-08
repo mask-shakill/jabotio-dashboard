@@ -1,5 +1,23 @@
 import { create } from "zustand";
-import { ProductPayload } from "@/types/product";
+
+export interface ProductPayload {
+  name: string;
+  price: string;
+  items: string;
+  old_price: string;
+  category: string;
+  descriptions: string;
+  tags: string; // stringify JSON
+  brand: string;
+  discount: number;
+  stock: number;
+  size: string; // stringify JSON
+  colors: string; // stringify JSON
+  warranty: string;
+  sold: number;
+  thumnails?: File | null;
+  images: File[];
+}
 
 interface ProductState {
   loading: boolean;
@@ -25,16 +43,14 @@ export const useCreateProductStore = create<ProductState>((set) => ({
       formData.append("descriptions", data.descriptions);
       formData.append("tags", data.tags);
       formData.append("brand", data.brand);
-      formData.append("discount", String(data.discount));
-      formData.append("stock", String(data.stock));
+      formData.append("discount", data.discount.toString());
+      formData.append("stock", data.stock.toString());
       formData.append("size", data.size);
       formData.append("colors", data.colors);
       formData.append("warranty", data.warranty);
-      formData.append("sold", String(data.sold));
+      formData.append("sold", data.sold.toString());
 
-      if (data.thumnails) {
-        formData.append("thumnails", data.thumnails);
-      }
+      if (data.thumnails) formData.append("thumnails", data.thumnails);
 
       data.images.forEach((file) => {
         formData.append("images", file);
@@ -45,11 +61,14 @@ export const useCreateProductStore = create<ProductState>((set) => ({
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to create product");
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create product");
+      }
 
       set({ loading: false });
-    } catch (err) {
-      set({ error: "Product create failed", loading: false });
+    } catch (error: any) {
+      set({ error: error.message || "Product create failed", loading: false });
     }
   },
 }));
