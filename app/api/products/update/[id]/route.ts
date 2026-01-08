@@ -3,6 +3,7 @@ import PocketBase from "pocketbase";
 import { verifyToken } from "@/utils/auth";
 
 const pb = new PocketBase(process.env.POCKETBASE_URL!);
+const PB_URL = process.env.POCKETBASE_URL!;
 
 export async function PATCH(
   req: NextRequest,
@@ -24,7 +25,7 @@ export async function PATCH(
     const { id } = await context.params;
 
     const formData = await req.formData();
-    const updateData = new FormData();
+    const data = new FormData();
 
     const fields = [
       "name",
@@ -35,35 +36,50 @@ export async function PATCH(
       "descriptions",
       "brand",
       "warranty",
-      "discount",
-      "stock",
-      "sold",
-      "thumnails_url",
     ];
 
     fields.forEach((f) => {
       const v = formData.get(f);
-      if (v) updateData.append(f, v.toString());
+      if (v) data.append(f, v.toString());
     });
 
-    ["tags", "size", "colors", "image_url"].forEach((f) => {
+    ["discount", "stock", "sold"].forEach((f) => {
       const v = formData.get(f);
-      if (v) updateData.append(f, v.toString());
+      if (v) data.append(f, v.toString());
+    });
+
+    ["tags", "size", "colors"].forEach((f) => {
+      const v = formData.get(f);
+      if (v) data.append(f, v.toString());
     });
 
     const thumnails = formData.get("thumnails");
     if (thumnails instanceof File) {
-      updateData.append("thumnails", thumnails);
+      data.append("thumnails", thumnails);
     }
 
     const images = formData.getAll("images");
     images.forEach((img) => {
-      if (img instanceof File) updateData.append("images", img);
+      if (img instanceof File) data.append("images", img);
     });
 
-    const product = await pb.collection("products").update(id, updateData);
+    const updated = await pb.collection("products").update(id, data);
 
-    return NextResponse.json({ product });
+    const imageUrls =
+      updated.images?.map(
+        (img: string) => `${PB_URL}/api/files/products/${updated.id}/${img}`
+      ) || [];
+
+    const thumnailsUrl = updated.thumnails
+      ? `${PB_URL}/api/files/products/${updated.id}/${updated.thumnails}`
+      : null;
+
+    const finalProduct = await pb.collection("products").update(updated.id, {
+      image_url: imageUrls,
+      thumnails_url: thumnailsUrl,
+    });
+
+    return NextResponse.json({ product: finalProduct });
   } catch {
     return NextResponse.json(
       { message: "Failed to update product" },

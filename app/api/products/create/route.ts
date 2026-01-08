@@ -1,14 +1,16 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import PocketBase from "pocketbase";
 import { verifyToken } from "@/utils/auth";
 
 const pb = new PocketBase(process.env.POCKETBASE_URL!);
+const PB_URL = process.env.POCKETBASE_URL!;
 
 export async function POST(req: NextRequest) {
   try {
     const user = await verifyToken(req);
-    if (!user)
+    if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
 
     if (!req.headers.get("content-type")?.includes("multipart/form-data")) {
       return NextResponse.json(
@@ -31,46 +33,52 @@ export async function POST(req: NextRequest) {
       "warranty",
     ];
 
-    for (const field of fields) {
-      const value = formData.get(field);
-      if (value) data.append(field, value.toString());
-    }
+    fields.forEach((f) => {
+      const v = formData.get(f);
+      if (v) data.append(f, v.toString());
+    });
 
-    // Numbers
-    const numbers = ["discount", "stock", "sold"];
-    for (const numField of numbers) {
-      const value = formData.get(numField);
-      if (value) data.append(numField, value.toString());
-    }
+    ["discount", "stock", "sold"].forEach((f) => {
+      const v = formData.get(f);
+      if (v) data.append(f, v.toString());
+    });
 
-    // JSON fields as stringified JSON
-    const jsonFields = ["colors", "size", "tags"];
-    for (const jsonField of jsonFields) {
-      const value = formData.get(jsonField);
-      if (value) data.append(jsonField, value.toString());
-    }
+    ["colors", "size", "tags"].forEach((f) => {
+      const v = formData.get(f);
+      if (v) data.append(f, v.toString());
+    });
 
-    // Thumbnail file
     const thumbnail = formData.get("thumnails");
-    if (thumbnail && thumbnail instanceof File && thumbnail.size > 0) {
+    if (thumbnail instanceof File) {
       data.append("thumnails", thumbnail);
     }
 
-    // Multiple images files
     const images = formData.getAll("images");
-    for (const image of images) {
-      if (image instanceof File && image.size > 0) {
-        data.append("images", image);
-      }
-    }
+    images.forEach((img) => {
+      if (img instanceof File) data.append("images", img);
+    });
 
-    const createdProduct = await pb.collection("products").create(data);
+    const product = await pb.collection("products").create(data);
+
+    const imageUrls =
+      product.images?.map(
+        (img: string) => `${PB_URL}/api/files/products/${product.id}/${img}`
+      ) || [];
+
+    const thumbnailUrl = product.thumnails
+      ? `${PB_URL}/api/files/products/${product.id}/${product.thumnails}`
+      : null;
+
+    const updatedProduct = await pb.collection("products").update(product.id, {
+      image_url: imageUrls,
+      thumnails_url: thumbnailUrl,
+    });
 
     return NextResponse.json({
       message: "Product created successfully",
-      product: createdProduct,
+      product: updatedProduct,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { message: "Failed to create product" },
       { status: 500 }
