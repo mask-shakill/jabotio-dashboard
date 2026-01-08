@@ -13,6 +13,6 @@ export interface ProductPayload {
   colors: string; // JSON string
   warranty: string;
   sold: number;
-  thumnails: File | null;
+  thumbnail: File | null;
   images: File[];
 }

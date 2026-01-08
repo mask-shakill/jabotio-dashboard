@@ -53,9 +53,9 @@ export async function PATCH(
       if (v) data.append(f, v.toString());
     });
 
-    const thumnails = formData.get("thumnails");
-    if (thumnails instanceof File) {
-      data.append("thumnails", thumnails);
+    const thumbnail = formData.get("thumbnail");
+    if (thumbnail instanceof File) {
+      data.append("thumbnail", thumbnail);
     }
 
     const images = formData.getAll("images");
@@ -70,13 +70,13 @@ export async function PATCH(
         (img: string) => `${PB_URL}/api/files/products/${updated.id}/${img}`
       ) || [];
 
-    const thumnailsUrl = updated.thumnails
-      ? `${PB_URL}/api/files/products/${updated.id}/${updated.thumnails}`
+    const thumbnailUrl = updated.thumbnail
+      ? `${PB_URL}/api/files/products/${updated.id}/${updated.thumbnail}`
       : null;
 
     const finalProduct = await pb.collection("products").update(updated.id, {
       image_url: imageUrls,
-      thumnails_url: thumnailsUrl,
+      thumbnail_url: thumbnailUrl,
     });
 
     return NextResponse.json({ product: finalProduct });

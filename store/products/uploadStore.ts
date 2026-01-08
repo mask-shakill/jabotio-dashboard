@@ -15,7 +15,7 @@ export interface ProductPayload {
   colors: string; // stringify JSON
   warranty: string;
   sold: number;
-  thumnails?: File | null;
+  thumbnail?: File | null;
   images: File[];
 }
 
@@ -50,7 +50,7 @@ export const useCreateProductStore = create<ProductState>((set) => ({
       formData.append("warranty", data.warranty);
       formData.append("sold", data.sold.toString());
 
-      if (data.thumnails) formData.append("thumnails", data.thumnails);
+      if (data.thumbnail) formData.append("thumbnail", data.thumbnail);
 
       data.images.forEach((file) => {
         formData.append("images", file);

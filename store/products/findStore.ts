@@ -16,7 +16,7 @@ export interface Product {
   colors: string; // JSON string
   warranty: string;
   sold: number;
-  thumnails_url: string;
+  thumbnail_url: string;
   image_url: string[]; // list of image URLs
   [key: string]: any; // extra fields if any
 }

@@ -16,9 +16,9 @@ export interface ProductUpdatePayload {
   colors?: string; // JSON string
   warranty?: string;
   sold?: number;
-  thumnails_url?: string;
+  thumbnail_url?: string;
   image_url?: string; // JSON string or url string depends on backend
-  thumnails?: File;
+  thumbnail?: File;
   images?: File[];
 }
 
@@ -53,11 +53,11 @@ export const useUpdateProductStore = create<UpdateStore>((set) => ({
       if (data.colors) formData.append("colors", data.colors);
       if (data.warranty) formData.append("warranty", data.warranty);
       if (data.sold !== undefined) formData.append("sold", String(data.sold));
-      if (data.thumnails_url)
-        formData.append("thumnails_url", data.thumnails_url);
+      if (data.thumbnail_url)
+        formData.append("thumbnail_url", data.thumbnail_url);
       if (data.image_url) formData.append("image_url", data.image_url);
 
-      if (data.thumnails) formData.append("thumnails", data.thumnails);
+      if (data.thumbnail) formData.append("thumbnail", data.thumbnail);
 
       if (data.images && data.images.length > 0) {
         data.images.forEach((file) => {

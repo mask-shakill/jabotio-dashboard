@@ -48,9 +48,9 @@ export async function POST(req: NextRequest) {
       if (v) data.append(f, v.toString());
     });
 
-    const thumbnail = formData.get("thumnails");
+    const thumbnail = formData.get("thumbnail");
     if (thumbnail instanceof File) {
-      data.append("thumnails", thumbnail);
+      data.append("thumbnail", thumbnail);
     }
 
     const images = formData.getAll("images");
@@ -65,13 +65,13 @@ export async function POST(req: NextRequest) {
         (img: string) => `${PB_URL}/api/files/products/${product.id}/${img}`
       ) || [];
 
-    const thumbnailUrl = product.thumnails
-      ? `${PB_URL}/api/files/products/${product.id}/${product.thumnails}`
+    const thumbnailUrl = product.thumbnail
+      ? `${PB_URL}/api/files/products/${product.id}/${product.thumbnail}`
       : null;
 
     const updatedProduct = await pb.collection("products").update(product.id, {
       image_url: imageUrls,
-      thumnails_url: thumbnailUrl,
+      thumbnail_url: thumbnailUrl,
     });
 
     return NextResponse.json({
