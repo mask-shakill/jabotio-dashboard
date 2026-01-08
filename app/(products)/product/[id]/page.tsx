@@ -54,24 +54,107 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       </div>
     );
 
-  const displayPrice =
-    product.old_price && product.old_price > product.price ? (
-      <div className="flex items-center gap-2">
-        <span className="text-3xl font-bold text-gray-900">
-          ${product.price}
-        </span>
-        <span className="text-lg text-gray-500 line-through">
-          ${product.old_price}
-        </span>
-        {product.discount > 0 && (
-          <span className="px-2 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded">
-            -{product.discount}%
+  // Helper function to handle tags
+  const renderTags = () => {
+    if (!product.tags) return null;
+
+    let tagsArray: string[] = [];
+
+    if (Array.isArray(product.tags)) {
+      tagsArray = product.tags;
+    } else if (typeof product.tags === "string") {
+      tagsArray = product.tags.split(",").map((tag) => tag.trim());
+    } else {
+      // Convert to string and try to split
+      tagsArray = String(product.tags)
+        .split(",")
+        .map((tag) => tag.trim());
+    }
+
+    // Filter out empty strings
+    tagsArray = tagsArray.filter((tag) => tag.length > 0);
+
+    if (tagsArray.length === 0) return null;
+
+    return (
+      <div className="flex flex-wrap gap-2 mt-1">
+        {tagsArray.map((tag: string, idx: number) => (
+          <span
+            key={idx}
+            className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+          >
+            {tag}
           </span>
-        )}
+        ))}
       </div>
-    ) : (
-      <span className="text-3xl font-bold text-gray-900">${product.price}</span>
     );
+  };
+
+  // Helper function for price display
+  const displayPrice = () => {
+    const price = Number(product.price) || 0;
+    const oldPrice = Number(product.old_price) || 0;
+    const discount = Number(product.discount) || 0;
+
+    if (oldPrice > price) {
+      return (
+        <div className="flex items-center gap-2">
+          <span className="text-3xl font-bold text-gray-900">
+            ${price.toFixed(2)}
+          </span>
+          <span className="text-lg text-gray-500 line-through">
+            ${oldPrice.toFixed(2)}
+          </span>
+          {discount > 0 && (
+            <span className="px-2 py-1 bg-red-100 text-red-600 text-sm font-semibold rounded">
+              -{discount}%
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <span className="text-3xl font-bold text-gray-900">
+        ${price.toFixed(2)}
+      </span>
+    );
+  };
+
+  // Helper function for images
+  const renderImages = () => {
+    if (
+      !product.image_url ||
+      !Array.isArray(product.image_url) ||
+      product.image_url.length === 0
+    ) {
+      return null;
+    }
+
+    return (
+      <div className="grid grid-cols-4 gap-2">
+        {product.image_url.map((url: string, idx: number) => (
+          <button
+            key={idx}
+            onClick={() => setSelectedImage(idx)}
+            className={`aspect-square rounded-lg overflow-hidden border-2 ${
+              selectedImage === idx ? "border-blue-500" : "border-gray-200"
+            }`}
+          >
+            <img
+              src={url}
+              alt={`Product view ${idx + 1}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src =
+                  "https://via.placeholder.com/150?text=No+Image";
+              }}
+            />
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -84,50 +167,39 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                 {product.thumbnail_url ? (
                   <img
                     src={product.thumbnail_url}
-                    alt={product.name}
+                    alt={product.name || "Product"}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://via.placeholder.com/500?text=No+Image";
+                      (e.target as HTMLImageElement).className =
+                        "w-full h-full object-contain p-8";
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No image
+                    No image available
                   </div>
                 )}
               </div>
 
-              {product.image_url && product.image_url.length > 0 && (
-                <div className="grid grid-cols-4 gap-2">
-                  {product.image_url.map((url: string, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                        selectedImage === idx
-                          ? "border-blue-500"
-                          : "border-gray-200"
-                      }`}
-                    >
-                      <img
-                        src={url}
-                        alt={`Product view ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
+              {renderImages()}
             </div>
 
             {/* Right Column - Details */}
             <div className="space-y-6">
               {/* Breadcrumb */}
               <div className="text-sm text-gray-500">
-                <span>Home</span> &gt; <span>{product.category}</span> &gt;{" "}
-                <span className="text-gray-900">{product.name}</span>
+                <span>Home</span> &gt;{" "}
+                <span>{product.category || "Category"}</span> &gt;{" "}
+                <span className="text-gray-900">
+                  {product.name || "Product"}
+                </span>
               </div>
 
               {/* Title */}
               <h1 className="text-3xl font-bold text-gray-900">
-                {product.name}
+                {product.name || "Untitled Product"}
               </h1>
 
               {/* Brand */}
@@ -139,27 +211,30 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               )}
 
               {/* Price */}
-              <div className="pt-4">{displayPrice}</div>
+              <div className="pt-4">{displayPrice()}</div>
 
               {/* Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-                {product.stock > 0 ? (
-                  <div className="flex flex-col items-center p-3 bg-green-50 rounded-lg">
-                    <Package className="w-5 h-5 text-green-600 mb-1" />
-                    <span className="text-sm text-gray-600">In Stock</span>
-                    <span className="font-semibold">{product.stock}</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center p-3 bg-red-50 rounded-lg">
-                    <Package className="w-5 h-5 text-red-600 mb-1" />
-                    <span className="text-sm text-gray-600">Out of Stock</span>
-                  </div>
-                )}
+                <div
+                  className={`flex flex-col items-center p-3 rounded-lg ${
+                    (product.stock || 0) > 0 ? "bg-green-50" : "bg-red-50"
+                  }`}
+                >
+                  <Package
+                    className={`w-5 h-5 mb-1 ${
+                      (product.stock || 0) > 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  />
+                  <span className="text-sm text-gray-600">Stock</span>
+                  <span className="font-semibold">{product.stock || 0}</span>
+                </div>
 
                 <div className="flex flex-col items-center p-3 bg-blue-50 rounded-lg">
                   <ShoppingCart className="w-5 h-5 text-blue-600 mb-1" />
                   <span className="text-sm text-gray-600">Sold</span>
-                  <span className="font-semibold">{product.sold}</span>
+                  <span className="font-semibold">{product.sold || 0}</span>
                 </div>
 
                 {product.warranty && (
@@ -218,33 +293,9 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   {product.tags && (
                     <div className="col-span-2">
                       <div className="text-sm text-gray-500">Tags</div>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {product.tags
-                          .split(",")
-                          .map((tag: string, idx: number) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                            >
-                              {tag.trim()}
-                            </span>
-                          ))}
-                      </div>
+                      {renderTags()}
                     </div>
                   )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-8">
-                <div className="flex gap-4">
-                  <button className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                    <ShoppingCart className="w-5 h-5" />
-                    Add to Cart
-                  </button>
-                  <button className="flex-1 border-2 border-blue-600 text-blue-600 py-3 px-6 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
-                    Buy Now
-                  </button>
                 </div>
               </div>
             </div>
